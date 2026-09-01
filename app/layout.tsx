@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://squirrel-board-trish-dex.openai.chatgpt.site'),
+  metadataBase: new URL('https://squirrel-board-trish-dex.triput79.chatgpt.site'),
   title: 'Squirrel Board',
   description: 'Capture ideas with your agent. Decide what deserves to become work.',
   openGraph: {
