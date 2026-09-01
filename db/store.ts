@@ -316,3 +316,51 @@ export async function listDecisions() {
     .all<Record<string, unknown>>();
   return result.results.map(mapDecision);
 }
+
+export async function listIdeasForCleanup(prefix: string) {
+  await ensureDatabase();
+  const normalized = prefix.trim();
+  if (normalized.length < 3 || normalized.length > 40) {
+    throw new Error('Cleanup prefix must be between 3 and 40 characters.');
+  }
+  const result = await db()
+    .prepare(`SELECT * FROM ideas
+      WHERE title LIKE ? ESCAPE '\\'
+      ORDER BY created_at DESC
+      LIMIT 50`)
+    .bind(`${normalized.replace(/[\\%_]/g, '\\$&')}%`)
+    .all<Record<string, unknown>>();
+  return result.results.map(mapIdea);
+}
+
+export async function deleteIdeasForCleanup(ids: string[]) {
+  await ensureDatabase();
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length < 1 || uniqueIds.length > 50) {
+    throw new Error('Cleanup requires between 1 and 50 explicit idea IDs.');
+  }
+  if (uniqueIds.some((id) => !/^IDEA-[0-9]{3,}$/.test(id))) {
+    throw new Error('Every cleanup target must be an IDEA-### identifier.');
+  }
+
+  const database = db();
+  const placeholders = uniqueIds.map(() => '?').join(', ');
+  const found = await database
+    .prepare(`SELECT id, title FROM ideas WHERE id IN (${placeholders}) ORDER BY id`)
+    .bind(...uniqueIds)
+    .all<{ id: string; title: string }>();
+
+  if (found.results.length !== uniqueIds.length) {
+    const foundIds = new Set(found.results.map((idea) => idea.id));
+    const missing = uniqueIds.filter((id) => !foundIds.has(id));
+    throw new Error(`Cleanup stopped because these ideas do not exist: ${missing.join(', ')}.`);
+  }
+
+  await database.batch([
+    database.prepare(`DELETE FROM proposals WHERE idea_id IN (${placeholders})`).bind(...uniqueIds),
+    database.prepare(`DELETE FROM decisions WHERE idea_id IN (${placeholders})`).bind(...uniqueIds),
+    database.prepare(`DELETE FROM ideas WHERE id IN (${placeholders})`).bind(...uniqueIds),
+  ]);
+
+  return found.results;
+}

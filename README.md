@@ -86,7 +86,23 @@ The application has no user accounts, private workspaces, external connectors, a
 
 The demonstration intentionally does not expose idea deletion in the public interface or through WebMCP. Because the board has no authentication or record ownership, a public delete action would allow any visitor or visiting agent to erase shared data. Omitting it preserves the product's central authority boundary: agents may capture and propose, while consequential changes require an identifiable human decision.
 
-This is a deliberate security choice, not an assumption that backlogs never need cleanup. The narrow next step is an operator-only maintenance path for removing test data and accidental records. A fuller product could add authenticated, human-authorized soft deletion with confirmation and an audit entry; an agent could propose removal, but should not perform it directly.
+This is a deliberate security choice, not an assumption that backlogs never need cleanup. The appropriately narrow answer is an operator-only maintenance path for removing test data and accidental records. A fuller product could add authenticated, human-authorized soft deletion with confirmation and an audit entry; an agent could propose removal, but should not perform it directly.
+
+The repository now includes that narrow operator path. It is deliberately absent from the UI and WebMCP. The deployment must have a secret `SQUIRREL_BOARD_OPERATOR_TOKEN`, and the same token must be supplied locally through that environment variable or an ignored `.env.operator` file.
+
+Preview records whose titles begin with a QA prefix:
+
+```bash
+npm run cleanup -- --prefix QA-0901
+```
+
+Delete only the records shown by that preview:
+
+```bash
+npm run cleanup -- --prefix QA-0901 --execute --confirm DELETE_SELECTED_IDEAS
+```
+
+Explicit IDs are also supported with `--ids IDEA-004,IDEA-005`. Every operation is capped at 50 explicit IDs. Deleting an idea also deletes its linked proposals and decision-log entries; the command stops without deleting anything if any requested ID is missing.
 
 ## Status vocabulary
 
