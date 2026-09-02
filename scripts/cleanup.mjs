@@ -36,7 +36,12 @@ function show(ideas) {
     console.log('No matching ideas.');
     return;
   }
-  console.table(ideas.map(({ id, title, status, source }) => ({ id, title, status, source })));
+  console.table(ideas.map((idea) => ({
+    id: idea.id,
+    title: idea.title,
+    ...('status' in idea ? { status: idea.status } : {}),
+    ...('source' in idea ? { source: idea.source } : {}),
+  })));
 }
 
 const prefix = option('--prefix');
