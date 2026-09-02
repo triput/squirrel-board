@@ -20,6 +20,15 @@ export async function POST(request: Request) {
     if (!ideaId || !field || proposedValue.length < 1 || reason.length < 3) {
       return Response.json({ error: 'Idea, field, proposed value, and reason are required.' }, { status: 400 });
     }
+    if (field === 'nextAction' && proposedValue.length > 500) {
+      return Response.json({ error: 'Proposed next action must be 500 characters or fewer.' }, { status: 400 });
+    }
+    if (field === 'notes' && proposedValue.length > 5000) {
+      return Response.json({ error: 'Proposed notes must be 5,000 characters or fewer.' }, { status: 400 });
+    }
+    if (reason.length > 500) {
+      return Response.json({ error: 'Proposal reason must be 500 characters or fewer.' }, { status: 400 });
+    }
     const proposal = await createProposal({ ideaId, field, proposedValue, reason });
     return Response.json({ proposal, message: `${proposal.id} is waiting for human review.` }, { status: 201 });
   } catch (error) {

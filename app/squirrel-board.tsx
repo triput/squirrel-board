@@ -114,9 +114,9 @@ export default function SquirrelBoard() {
       inputSchema: {
         type: 'object',
         properties: {
-          title: { type: 'string', description: 'A concise name for the idea, 3 to 120 characters.' },
-          why: { type: 'string', description: 'Why the idea might matter, 3 to 500 characters.' },
-          notes: { type: 'string', description: 'Optional links, boundaries, or useful context.' },
+          title: { type: 'string', minLength: 3, maxLength: 120, description: 'A concise name for the idea, 3 to 120 characters.' },
+          why: { type: 'string', minLength: 3, maxLength: 500, description: 'Why the idea might matter, 3 to 500 characters.' },
+          notes: { type: 'string', maxLength: 5000, description: 'Optional links, boundaries, or useful context, up to 5,000 characters.' },
         },
         required: ['title', 'why'],
         additionalProperties: false,
@@ -189,8 +189,8 @@ export default function SquirrelBoard() {
         properties: {
           ideaId: { type: 'string', pattern: '^IDEA-[0-9]{3,}$', description: 'The existing idea identifier.' },
           field: { type: 'string', enum: ['status', 'nextAction', 'notes'], description: 'The field the agent proposes changing.' },
-          proposedValue: { type: 'string', description: 'The proposed new value.' },
-          reason: { type: 'string', description: 'Why this change may help the human during triage.' },
+          proposedValue: { type: 'string', minLength: 1, maxLength: 5000, description: 'The proposed new value. Next actions allow 500 characters; notes allow 5,000.' },
+          reason: { type: 'string', minLength: 3, maxLength: 500, description: 'Why this change may help the human during triage, 3 to 500 characters.' },
         },
         required: ['ideaId', 'field', 'proposedValue', 'reason'],
         additionalProperties: false,

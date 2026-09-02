@@ -28,6 +28,9 @@ export async function POST(request: Request) {
     if (why.length < 3 || why.length > 500) {
       return Response.json({ error: 'Why it matters must be between 3 and 500 characters.' }, { status: 400 });
     }
+    if (notes && notes.length > 5000) {
+      return Response.json({ error: 'Notes must be 5,000 characters or fewer.' }, { status: 400 });
+    }
 
     const idea = await createIdea({ title, why, notes, source });
     return Response.json({ idea, message: `${idea.id} captured without becoming a commitment.` }, { status: 201 });
