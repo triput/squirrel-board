@@ -198,6 +198,42 @@ export async function getIdea(id: string) {
   return row ? mapIdea(row) : null;
 }
 
+export async function updateIdeaByHuman(input: {
+  id: string;
+  status: IdeaStatus;
+  nextAction: string | null;
+  notes: string | null;
+  reason: string;
+}) {
+  await ensureDatabase();
+  const database = db();
+  const current = await getIdea(input.id);
+  if (!current) throw new Error('Idea not found.');
+
+  const changes: string[] = [];
+  if (current.status !== input.status) changes.push(`status ${current.status} → ${input.status}`);
+  if (current.nextAction !== input.nextAction) changes.push('next action updated');
+  if (current.notes !== input.notes) changes.push('notes updated');
+  if (changes.length === 0) throw new Error('Nothing changed.');
+
+  const now = Date.now();
+  const decisionId = `DEC-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+  await database.batch([
+    database.prepare(`UPDATE ideas
+      SET status = ?, next_action = ?, notes = ?, updated_at = ?
+      WHERE id = ?`)
+      .bind(input.status, input.nextAction, input.notes, now, input.id),
+    database.prepare(`INSERT INTO decisions
+      (id, idea_id, decision, reason, source, created_at)
+      VALUES (?, ?, ?, ?, 'Human', ?)`)
+      .bind(decisionId, input.id, `Human triage: ${changes.join('; ')}`, input.reason, now),
+  ]);
+
+  const updated = await getIdea(input.id);
+  if (!updated) throw new Error('The updated idea could not be read back.');
+  return updated;
+}
+
 function mapProposal(row: Record<string, unknown>): Proposal {
   return {
     id: String(row.id),

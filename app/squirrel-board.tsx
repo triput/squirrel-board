@@ -62,6 +62,8 @@ const statusStyles: Record<string, string> = {
   Dropped: 'border border-[#a8515d]/40 bg-[#a8515d]/15 text-[#e5a1ab]',
 };
 
+const statuses = ['Captured', 'Exploring', 'Decision needed', 'Active', 'Parked', 'Done', 'Dropped'];
+
 async function readJson(response: Response) {
   const payload = await response.json() as Record<string, unknown>;
   if (!response.ok) throw new Error(String(payload.error ?? 'The request failed.'));
@@ -79,6 +81,12 @@ export default function SquirrelBoard() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [siteToolsReady, setSiteToolsReady] = useState(false);
+  const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
+  const [triageStatus, setTriageStatus] = useState('Captured');
+  const [triageNextAction, setTriageNextAction] = useState('');
+  const [triageNotes, setTriageNotes] = useState('');
+  const [triageReason, setTriageReason] = useState('');
+  const [triageSaving, setTriageSaving] = useState(false);
 
   const loadWorkspace = useCallback(async () => {
     const [ideasPayload, proposalsPayload, decisionsPayload] = await Promise.all([
@@ -261,6 +269,43 @@ export default function SquirrelBoard() {
     }
   }
 
+  function openTriage(idea: Idea) {
+    setEditingIdea(idea);
+    setTriageStatus(idea.status);
+    setTriageNextAction(idea.nextAction ?? '');
+    setTriageNotes(idea.notes ?? '');
+    setTriageReason('');
+    setError('');
+    setNotice('');
+  }
+
+  async function saveTriage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingIdea) return;
+    setTriageSaving(true);
+    setError('');
+    setNotice('');
+    try {
+      const payload = await readJson(await fetch(`/api/ideas/${encodeURIComponent(editingIdea.id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          status: triageStatus,
+          nextAction: triageNextAction,
+          notes: triageNotes,
+          reason: triageReason,
+        }),
+      }));
+      setEditingIdea(null);
+      setNotice(String(payload.message));
+      await loadWorkspace();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not update the idea.');
+    } finally {
+      setTriageSaving(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#0d1320] text-[#eef1f7]">
       <header className="border-b border-[#33405a] bg-[#111827]/90 shadow-[0_1px_30px_rgba(3,7,18,0.35)] backdrop-blur-xl">
@@ -338,9 +383,10 @@ export default function SquirrelBoard() {
                 <h3 className="mt-5 text-xl font-black leading-tight tracking-[-0.025em]">{idea.title}</h3>
                 <p className="mt-3 flex-1 text-sm leading-6 text-[#aeb8ca]">{idea.why}</p>
                 {idea.nextAction && <p className="mt-4 rounded-xl border border-[#394761] bg-[#10192a] px-3 py-2 text-xs leading-5 text-[#aeb8ca]"><strong className="text-[#87c8bc]">Next:</strong> {idea.nextAction}</p>}
-                <div className="mt-6 flex items-center justify-between border-t border-[#303c54] pt-4 text-xs font-bold text-[#8492ab]">
+                {idea.notes && <p className="mt-3 line-clamp-3 text-xs leading-5 text-[#8f9ab0]"><strong className="text-[#b4a4dd]">Notes:</strong> {idea.notes}</p>}
+                <div className="mt-6 flex items-center justify-between gap-3 border-t border-[#303c54] pt-4 text-xs font-bold text-[#8492ab]">
                   <span>Captured by {idea.source}</span>
-                  <span aria-hidden="true" className="transition group-hover:translate-x-1">→</span>
+                  <button type="button" onClick={() => openTriage(idea)} className="rounded-lg border border-[#5a6680] bg-[#202b41] px-3 py-1.5 font-extrabold text-[#d8deea] transition hover:border-[#8b70b3] hover:bg-[#2a3450] focus:outline-none focus:ring-4 focus:ring-[#8b70b3]/20">Triage</button>
                 </div>
               </article>
             ))}
@@ -404,6 +450,39 @@ export default function SquirrelBoard() {
           </section>
         </div>
       </section>
+
+      {editingIdea && (
+        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-[#050812]/80 p-4 backdrop-blur-sm" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditingIdea(null); }}>
+          <form onSubmit={saveTriage} role="dialog" aria-modal="true" aria-labelledby="triage-heading" className="my-6 w-full max-w-xl rounded-[28px] border border-[#4b5672] bg-[#172033] p-5 shadow-[0_30px_100px_rgba(0,0,0,0.65)] sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs font-bold text-[#8492ab]">{editingIdea.id}</p>
+                <h2 id="triage-heading" className="mt-1 text-2xl font-black tracking-[-0.03em]">Triage {editingIdea.title}</h2>
+              </div>
+              <button type="button" onClick={() => setEditingIdea(null)} aria-label="Close triage" className="grid h-9 w-9 place-items-center rounded-xl border border-[#465571] text-lg text-[#b8c1d1] hover:bg-[#242f47]">×</button>
+            </div>
+
+            <label className="mt-6 block text-sm font-bold" htmlFor="triage-status">Status</label>
+            <select id="triage-status" value={triageStatus} onChange={(event) => setTriageStatus(event.target.value)} className="mt-2 w-full rounded-xl border border-[#43516c] bg-[#0f1728] px-4 py-3 text-[#f2f4f8] outline-none focus:border-[#6fb8c6] focus:ring-4 focus:ring-[#6fb8c6]/15">
+              {statuses.map((status) => <option key={status}>{status}</option>)}
+            </select>
+
+            <label className="mt-4 block text-sm font-bold" htmlFor="triage-next">Next action <span className="font-normal text-[#8f9ab0]">(optional)</span></label>
+            <textarea id="triage-next" value={triageNextAction} onChange={(event) => setTriageNextAction(event.target.value)} maxLength={500} className="mt-2 min-h-20 w-full resize-y rounded-xl border border-[#43516c] bg-[#0f1728] px-4 py-3 text-[#f2f4f8] outline-none focus:border-[#6fb8c6] focus:ring-4 focus:ring-[#6fb8c6]/15" />
+
+            <label className="mt-4 block text-sm font-bold" htmlFor="triage-notes">Notes <span className="font-normal text-[#8f9ab0]">(optional)</span></label>
+            <textarea id="triage-notes" value={triageNotes} onChange={(event) => setTriageNotes(event.target.value)} maxLength={5000} className="mt-2 min-h-28 w-full resize-y rounded-xl border border-[#43516c] bg-[#0f1728] px-4 py-3 text-[#f2f4f8] outline-none focus:border-[#6fb8c6] focus:ring-4 focus:ring-[#6fb8c6]/15" />
+
+            <label className="mt-4 block text-sm font-bold" htmlFor="triage-reason">Why are you making this decision?</label>
+            <textarea id="triage-reason" value={triageReason} onChange={(event) => setTriageReason(event.target.value)} minLength={3} maxLength={500} required className="mt-2 min-h-20 w-full resize-y rounded-xl border border-[#43516c] bg-[#0f1728] px-4 py-3 text-[#f2f4f8] outline-none focus:border-[#6fb8c6] focus:ring-4 focus:ring-[#6fb8c6]/15" placeholder="A short reason becomes part of the decision log." />
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setEditingIdea(null)} className="rounded-xl border border-[#4b5872] px-4 py-2.5 text-sm font-extrabold text-[#c4ccda] hover:bg-[#202b41]">Cancel</button>
+              <button type="submit" disabled={triageSaving} className="rounded-xl bg-[#377f74] px-5 py-2.5 text-sm font-extrabold text-white hover:bg-[#45988b] disabled:cursor-wait disabled:opacity-60">{triageSaving ? 'Saving decision…' : 'Save human decision'}</button>
+            </div>
+          </form>
+        </div>
+      )}
     </main>
   );
 }

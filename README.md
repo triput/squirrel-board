@@ -25,14 +25,16 @@ Squirrel Board exposes four tools:
 
 The proposal workflow is the product's central collaboration boundary. An agent proposal appears in **Pending proposals**. A human may approve or reject it. Only approval changes the idea, and the resolution is written to the visible decision log with its reason.
 
+Humans do not need to wait for an agent proposal to manage their own backlog. Every idea card has a **Triage** action for directly setting status, next action, and notes. The human supplies a short reason, and Squirrel Board writes that decision to the same visible log.
+
 ## Human-agent workflow
 
 1. An idea emerges during other work.
 2. The agent calls `capture_idea` with a concise title and why it might matter.
 3. The idea appears immediately on the shared board with status **Captured**.
 4. The agent can inspect existing ideas and propose a bounded update.
-5. The human approves or rejects the proposal in the normal interface.
-6. Squirrel Board records the decision and provenance.
+5. The human approves or rejects the proposal, or directly triages an idea, in the normal interface.
+6. Squirrel Board records the human decision and reason.
 
 Capturing is not committing. That is the entire point.
 
