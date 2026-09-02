@@ -38,6 +38,25 @@ Humans do not need to wait for an agent proposal to manage their own backlog. Ev
 
 Capturing is not committing. That is the entire point.
 
+## Text field limits
+
+Character limits are enforced after leading and trailing whitespace is removed.
+
+| Surface | Field | Required | Allowed length |
+|---|---|---:|---:|
+| Human quick capture | Idea title | Yes | 3–120 characters |
+| Human quick capture | Why it might matter | Yes | 3–500 characters |
+| Human triage | Next action | No | 0–500 characters |
+| Human triage | Notes | No | 0–5,000 characters |
+| Human triage | Decision reason | Yes | 3–500 characters |
+| WebMCP `capture_idea` | Title | Yes | 3–120 characters |
+| WebMCP `capture_idea` | Why | Yes | 3–500 characters |
+| WebMCP `capture_idea` | Notes | No | No explicit application maximum in the MVP |
+| WebMCP `propose_update` | Proposed value | Yes | 1 character minimum; no explicit application maximum in the MVP |
+| WebMCP `propose_update` | Reason | Yes | 3 character minimum; no explicit application maximum in the MVP |
+
+The missing agent-side maxima are documented MVP boundaries, not recommendations for enormous submissions. A future pass should harmonize agent limits with the corresponding human fields and add live character counts to bounded human inputs.
+
 ## Run locally
 
 Requirements:
